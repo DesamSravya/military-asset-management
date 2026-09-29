@@ -1,0 +1,117 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  BASE_COMMANDER
+  LOGISTICS_OFFICER
+}
+
+model Base {
+  id          Int       @id @default(autoincrement())
+  name        String
+  location    String
+  users       User[]
+  purchases   Purchase[]
+  fromTransfers Transfer[] @relation("fromBase")
+  toTransfers   Transfer[] @relation("toBase")
+  assignments Assignment[]
+  expenditures Expenditure[]
+  createdAt   DateTime  @default(now())
+}
+
+model User {
+  id            Int       @id @default(autoincrement())
+  name          String
+  email         String    @unique
+  passwordHash  String
+  role          Role
+  baseId        Int?
+  base          Base?     @relation(fields: [baseId], references: [id])
+  purchases     Purchase[]
+  transfers     Transfer[]
+  assignments   Assignment[]
+  expenditures  Expenditure[]
+  auditLogs     AuditLog[]
+  createdAt     DateTime  @default(now())
+}
+
+model EquipmentType {
+  id            Int          @id @default(autoincrement())
+  name          String       @unique
+  category      String
+  purchases     Purchase[]
+  transfers     Transfer[]
+  assignments   Assignment[]
+  expenditures  Expenditure[]
+  createdAt     DateTime     @default(now())
+}
+
+model Purchase {
+  id              Int           @id @default(autoincrement())
+  baseId          Int
+  equipmentTypeId Int
+  quantity        Int
+  purchaseDate    DateTime
+  createdBy       Int
+  base            Base          @relation(fields: [baseId], references: [id])
+  equipmentType   EquipmentType @relation(fields: [equipmentTypeId], references: [id])
+  creator         User          @relation(fields: [createdBy], references: [id])
+  createdAt       DateTime      @default(now())
+}
+
+model Transfer {
+  id              Int           @id @default(autoincrement())
+  fromBaseId      Int
+  toBaseId        Int
+  equipmentTypeId Int
+  quantity        Int
+  transferDate    DateTime      @default(now())
+  createdBy       Int
+  fromBase        Base          @relation("fromBase", fields: [fromBaseId], references: [id])
+  toBase          Base          @relation("toBase", fields: [toBaseId], references: [id])
+  equipmentType   EquipmentType @relation(fields: [equipmentTypeId], references: [id])
+  creator         User          @relation(fields: [createdBy], references: [id])
+}
+
+model Assignment {
+  id              Int           @id @default(autoincrement())
+  baseId          Int
+  equipmentTypeId Int
+  assignedTo      String
+  quantity        Int
+  assignedDate    DateTime      @default(now())
+  createdBy       Int
+  base            Base          @relation(fields: [baseId], references: [id])
+  equipmentType   EquipmentType @relation(fields: [equipmentTypeId], references: [id])
+  creator         User          @relation(fields: [createdBy], references: [id])
+}
+
+model Expenditure {
+  id              Int           @id @default(autoincrement())
+  baseId          Int
+  equipmentTypeId Int
+  quantity        Int
+  expenditureDate DateTime      @default(now())
+  recordedBy      Int
+  base            Base          @relation(fields: [baseId], references: [id])
+  equipmentType   EquipmentType @relation(fields: [equipmentTypeId], references: [id])
+  recorder        User          @relation(fields: [recordedBy], references: [id])
+}
+
+model AuditLog {
+  id         BigInt   @id @default(autoincrement())
+  userId     Int?
+  action     String
+  entityType String
+  entityId   Int?
+  details    Json?
+  createdAt  DateTime @default(now())
+  user       User?    @relation(fields: [userId], references: [id])
+}
